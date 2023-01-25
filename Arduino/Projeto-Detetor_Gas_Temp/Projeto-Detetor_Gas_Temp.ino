@@ -62,7 +62,6 @@ void sendUptime(){
   Blynk.virtualWrite(1, t); //ENVIA AO WIDGET GAUGE (PINO VIRTUAL 1) O VALOR DA TEMPERATURA
   Blynk.virtualWrite(2, h); //ENVIA AO WIDGET GAUGE (PINO VIRTUAL 2) O VALOR DA UMIDADE
 }
-}
  
 void loop() 
 {
