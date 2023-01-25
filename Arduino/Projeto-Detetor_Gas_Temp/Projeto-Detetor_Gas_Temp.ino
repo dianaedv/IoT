@@ -1,8 +1,24 @@
+#include <ESP8266_Lib.h> //INCLUSÃO DE BIBLIOTECA
+#include <BlynkSimpleShieldEsp8266.h> //INCLUSÃO DE BIBLIOTECA
+#include <SoftwareSerial.h> //INCLUSÃO DE BIBLIOTECA
+
 #include "DHT.h"
  
 #define DHTPIN A1 // pino que estamos conectado
 #define DHTTYPE DHT11 // DHT 11
 DHT dht(DHTPIN, DHTTYPE);
+
+// conexão do esp8266 com o blynk
+SoftwareSerial EspSerial(10, 11); // 10 = RX, 11 = TX
+
+char auth[] = "YourAuthToken"; // Auth Token fornecido pelo projeto no Blynk.
+BlynkTimer timer; // objeto do tipo BlynkTimer
+char ssid[] = "Nome__Wifi"; // Nome da rede sem fio
+char pass[] = "Senha_Wifi"; // Senha da rede sem fio
+
+#define ESP8266_BAUD 9600 // taxa de comunicação do esp8266 com o arduino uno
+
+ESP8266 wifi(&EspSerial);
 
 // definição dos pinos dos sensores
 int pinMQ2 = A0; //Pino do sensor de gás MQ2
@@ -20,15 +36,32 @@ float limite_temp = 55.0;
 int leitura_gas = 0;
 int leitura_temp = 0;
 
+float h = 0;
+float t = 0;
+float g = 0;
+
 void setup() 
 {
-  Serial.begin(9600);
-  Serial.println("DHTxx test!");
   pinMode(buzzer, OUTPUT);
   pinMode(led_normal, OUTPUT);
   pinMode(led_MQ2, OUTPUT);
   pinMode(led_DHT, OUTPUT);
+  Serial.begin(9600);
+
   dht.begin();
+  delay(10);
+  EspSerial.begin(ESP8266_BAUD);
+  delay(100);
+  Blynk.begin(auth, wifi, ssid, pass);
+
+  timer.setInterval(1000L, sendUptime);
+  
+}
+
+void sendUptime(){
+  Blynk.virtualWrite(1, t); //ENVIA AO WIDGET GAUGE (PINO VIRTUAL 1) O VALOR DA TEMPERATURA
+  Blynk.virtualWrite(2, h); //ENVIA AO WIDGET GAUGE (PINO VIRTUAL 2) O VALOR DA UMIDADE
+}
 }
  
 void loop() 
@@ -47,8 +80,8 @@ void loop()
   // Aquisição da temperatura pelo sensor DHT11 e retorno do valor no monitor serial
   // A leitura da temperatura e umidade pode levar 250ms!
   // O atraso do sensor pode chegar a 2 segundos.
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
+  h = dht.readHumidity();
+  t = dht.readTemperature();
   // testa se retorno é valido, caso contrário algo está errado.
   if (isnan(t) || isnan(h)) 
   {
@@ -87,4 +120,6 @@ void loop()
     digitalWrite(led_MQ2, LOW);
     delay(1000);
   }
+  Blynk.run();
+  Timer.run();
 }
