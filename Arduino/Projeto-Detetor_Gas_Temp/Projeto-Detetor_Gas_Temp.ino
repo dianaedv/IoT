@@ -121,5 +121,5 @@ void loop()
     delay(1000);
   }
   Blynk.run();
-  Timer.run();
+  timer.run();
 }
