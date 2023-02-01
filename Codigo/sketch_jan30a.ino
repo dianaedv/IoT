@@ -24,7 +24,7 @@ DHT dht(DHTPIN, DHTTYPE);
 
 // definição dos pinos dos sensores
 int pinMQ2 = A0; //Pino do sensor de gás MQ2
-int pinDHT = A2; //Pino do sensor de temperatura DHT
+int pinDHT = A1; //Pino do sensor de temperatura DHT
 
 // definição dos pinos dos sinalizadores
 int buzzer = 8;  //Pino
@@ -67,6 +67,11 @@ char pass[] = "abcd1234";
 // Your ESP8266 baud rate:
 #define ESP8266_BAUD 9600
 
+// led virtual pins on blynk
+WidgetLED blynk_led_normal(V3);
+WidgetLED blynk_led_MQ2(V4);
+WidgetLED blynk_led_DHT(V5);
+
 ESP8266 wifi(&EspSerial);
 BlynkTimer timer;
 
@@ -95,10 +100,31 @@ void setup()
   timer.setInterval(1000L, sendUptime);
 }
 
+bool cond_gas  = false;
+bool cond_temp = false;
 void sendUptime(){
   Blynk.virtualWrite(0, leitura_gas); // ENVIA AO WIDGET GAUGE (PINO VIRTUAL 0) O VALOR DA LEITURA DO GAS
   Blynk.virtualWrite(1, leitura_temp); //ENVIA AO WIDGET GAUGE (PINO VIRTUAL 1) O VALOR DA TEMPERATURA
   Blynk.virtualWrite(2, leitura_umidade); //ENVIA AO WIDGET GAUGE (PINO VIRTUAL 2) O VALOR DA UMIDADE
+  
+  if (cond_gas || cond_temp){
+    blynk_led_normal.off();
+    
+    if(cond_gas)
+      blynk_led_MQ2.on();
+    else
+      blynk_led_MQ2.off();
+      
+    if(cond_temp)
+      blynk_led_DHT.on();
+    else
+      blynk_led_DHT.off();
+  }
+  else{
+    blynk_led_normal.on();
+    blynk_led_MQ2.off();
+    blynk_led_DHT.off();
+  }
 }
 
 void loop()
@@ -136,24 +162,27 @@ void loop()
     Serial.print(t);
     Serial.println(" ºC");
   }
-  
+
   // Acionamento dos sinalizadores
-  if (leitura_temp >= limite_temp) {   // Caso a temperatura lida seja maior que o limite definido
+  cond_gas = leitura_gas >= limite_gas;
+  cond_temp = leitura_temp >= limite_temp;
+  
+  if (cond_temp) {   // Caso a temperatura lida seja maior que o limite definido
     digitalWrite(led_normal, LOW);
     digitalWrite(led_DHT, HIGH);       // aciona o led amarelo
   }
   else {
     digitalWrite(led_DHT, LOW);
   }
-  if (leitura_gas >= limite_gas) {    // Caso o valor da leitura do gas seja maior que o limite definido
+  if (cond_gas) {    // Caso o valor da leitura do gas seja maior que o limite definido
     digitalWrite(led_normal, LOW);
     digitalWrite(led_MQ2, HIGH);      // aciona o led vermelho e
     digitalWrite(buzzer, HIGH);       // aciona o buzzer (Alarme de vazamento)
-    // tone(buzzer,80);
+    tone(buzzer,80);
     Serial.println("Alarme disparado!!!"); //Apresenta mensagem na porta serial
     delay(1000); //Tempo de disparo do alarme
     digitalWrite(buzzer, LOW); //Desliga o alarme
-    // noTone(buzzer);
+     noTone(buzzer);
     delay(1000); //Aguarda
   }
   else {
@@ -164,6 +193,3 @@ void loop()
   Blynk.run();
   timer.run();
 }
-  // You can inject your own code or combine it with other sketches.
-  // Check other examples on how to communicate with Blynk. Remember
-  // to avoid delay() function!
